@@ -5,5 +5,12 @@
   "description": "统计每天在各个网站上花费的时间",
   "action": {
     "default_popup": "popup.html"
-  }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "tabs",
+    "storage"
+  ]
 }
