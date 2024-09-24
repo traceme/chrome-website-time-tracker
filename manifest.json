@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "网站时间统计",
+  "version": "0.1",
+  "description": "统计每天在各个网站上花费的时间",
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
