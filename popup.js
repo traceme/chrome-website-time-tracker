@@ -14,7 +14,7 @@ function formatDate(timestamp) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.body.style.width = '1000px';
+  document.body.style.width = '1200px';  // 修改这里
   document.body.style.height = '600px';
 
   chrome.runtime.sendMessage({ action: 'getDomainTimeMap' }, response => {

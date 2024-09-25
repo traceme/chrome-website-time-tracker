@@ -23,7 +23,13 @@ function initialize() {
     // 如果有活动标签，重新开始计时
     if (activeTabId) {
       chrome.tabs.get(activeTabId, tab => {
-        if (tab) {
+        if (chrome.runtime.lastError) {
+          console.warn(`Error getting tab: ${chrome.runtime.lastError.message}`);
+          activeTabId = null;
+          activeDomain = null;
+          activeStartTime = null;
+          saveData();
+        } else if (tab) {
           setActiveTab(tab.id, tab.url, tab.title);
         }
       });
@@ -119,6 +125,10 @@ function saveData() {
 
 chrome.tabs.onActivated.addListener(activeInfo => {
   chrome.tabs.get(activeInfo.tabId, tab => {
+    if (chrome.runtime.lastError) {
+      console.warn(`Error getting tab: ${chrome.runtime.lastError.message}`);
+      return;
+    }
     setActiveTab(tab.id, tab.url, tab.title);
   });
 });
@@ -175,6 +185,10 @@ function handleChromeBecomingActive() {
     activeStartTime = Date.now();
   }
   chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+    if (chrome.runtime.lastError) {
+      console.warn(`Error querying tabs: ${chrome.runtime.lastError.message}`);
+      return;
+    }
     if (tabs.length > 0) {
       setActiveTab(tabs[0].id, tabs[0].url, tabs[0].title);
     }
