@@ -20,7 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.runtime.sendMessage({ action: 'getDomainTimeMap' }, response => {
     const domainTimeList = document.getElementById('domain-time-list');
     domainTimeList.innerHTML = '';
-    for (const [domain, time] of Object.entries(response.domainTimeMap)) {
+    
+    // 将域名和时间转换为数组并按时间降序排序
+    const sortedDomains = Object.entries(response.domainTimeMap)
+      .sort((a, b) => b[1] - a[1]);
+
+    sortedDomains.forEach(([domain, time]) => {
       const listItem = document.createElement('li');
       
       const domainName = document.createElement('div');
@@ -39,6 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
       listItem.appendChild(domainName);
       listItem.appendChild(periodList);
       domainTimeList.appendChild(listItem);
-    }
+    });
   });
 });
