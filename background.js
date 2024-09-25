@@ -37,6 +37,8 @@ chrome.tabs.onActivated.addListener(activeInfo => {
     const domain = getDomainFromUrl(tab.url);
     if (domain) {
       activeDomain = domain;
+    } else {
+      activeDomain = null;
     }
   });
 });
@@ -48,6 +50,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (domain) {
       activeDomain = domain;
       activeStartTime = Date.now();
+    } else {
+      activeDomain = null;
     }
   }
 });
@@ -66,6 +70,8 @@ chrome.windows.onFocusChanged.addListener(windowId => {
         if (domain) {
           activeDomain = domain;
           activeStartTime = Date.now();
+        } else {
+          activeDomain = null;
         }
       }
     });
