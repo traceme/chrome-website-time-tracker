@@ -14,76 +14,53 @@ function formatDate(timestamp) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.body.style.width = '1200px';  // 修改这里
+  document.body.style.width = '1200px';
   document.body.style.height = '600px';
 
-  chrome.runtime.sendMessage({ action: 'getDomainTimeMap' }, response => {
-    const domainTimeList = document.getElementById('domain-time-list');
-    domainTimeList.innerHTML = '';
+  chrome.runtime.sendMessage({ action: 'getTimeMap' }, response => {
+    const siteTimeList = document.getElementById('site-time-list');
+    siteTimeList.innerHTML = '';
     
-    const sortedDomains = Object.entries(response.domainTimeMap)
+    const sortedSites = Object.entries(response.siteTimeMap)
       .sort((a, b) => b[1] - a[1]);
 
-    sortedDomains.forEach(([domain, totalTime]) => {
-      const listItem = document.createElement('li');
+    sortedSites.forEach(([site, totalTime]) => {
+      const siteItem = document.createElement('li');
       
-      const domainName = document.createElement('div');
-      domainName.className = 'domain-name';
-      domainName.textContent = `${domain}: ${formatTime(totalTime)}`;
+      const siteName = document.createElement('div');
+      siteName.className = 'site-name';
+      siteName.textContent = `${site}: ${formatTime(totalTime)}`;
       
-      const visitPeriods = response.domainVisitPeriods[domain];
-      const periodList = document.createElement('ul');
+      const pageList = document.createElement('ul');
+      const pageTimeMap = response.pageTimeMap[site] || {};
+      const pageTitleMap = response.pageTitleMap[site] || {};
+      const pageVisitPeriods = response.pageVisitPeriods[site] || {};
       
-      // 合并相同 URL 的时间段
-      const mergedPeriods = mergePeriods(visitPeriods);
+      const sortedPages = Object.entries(pageTimeMap)
+        .sort((a, b) => b[1] - a[1]);
       
-      mergedPeriods.forEach(period => {
-        const periodItem = document.createElement('li');
-        periodItem.className = 'time-period';
-        const duration = period.end - period.start;
-        periodItem.innerHTML = `
-          <span class="period-duration">${formatTime(duration)}</span>
-          <span class="period-title">${period.title || '无标题'}</span>
-          <span class="period-time">${formatDate(period.start)} 到 ${formatDate(period.end)}</span>
+      sortedPages.forEach(([page, pageTime]) => {
+        const pageItem = document.createElement('li');
+        pageItem.className = 'page-item';
+        const title = (pageTitleMap[page] || 'Untitled').substring(0, 30);
+        const periods = pageVisitPeriods[page] || [];
+        
+        let periodsHtml = '';
+        periods.forEach(period => {
+          periodsHtml += `<div class="period">${formatDate(period.start)} - ${formatDate(period.end)}</div>`;
+        });
+        
+        pageItem.innerHTML = `
+          <div class="page-title">${title}</div>
+          <div class="page-time">${formatTime(pageTime)}</div>
+          <div class="page-periods">${periodsHtml}</div>
         `;
-        periodList.appendChild(periodItem);
+        pageList.appendChild(pageItem);
       });
 
-      listItem.appendChild(domainName);
-      listItem.appendChild(periodList);
-      domainTimeList.appendChild(listItem);
+      siteItem.appendChild(siteName);
+      siteItem.appendChild(pageList);
+      siteTimeList.appendChild(siteItem);
     });
   });
 });
-
-function mergePeriods(periods) {
-  if (!periods || periods.length === 0) return [];
-
-  const sortedPeriods = periods.sort((a, b) => a.start - b.start);
-  const mergedPeriods = [];
-
-  let currentPeriod = sortedPeriods[0];
-
-  for (let i = 1; i < sortedPeriods.length; i++) {
-    const nextPeriod = sortedPeriods[i];
-
-    // 如果两个时间段的间隔小于5分钟，我们认为它们是连续的
-    if (nextPeriod.start - currentPeriod.end <= 5 * 60 * 1000) {
-      // 合并时间段
-      currentPeriod.end = Math.max(currentPeriod.end, nextPeriod.end);
-      // 如果当前时间段有标题，更新合并后的时间段标题
-      if (nextPeriod.title && nextPeriod.title !== currentPeriod.title) {
-        currentPeriod.title = (currentPeriod.title || '无标题') + ' | ' + nextPeriod.title;
-      }
-    } else {
-      // 如果不连续，添加当前时间段到结果中，并开始一个新的时间段
-      mergedPeriods.push(currentPeriod);
-      currentPeriod = nextPeriod;
-    }
-  }
-
-  // 添加最后一个时间段
-  mergedPeriods.push(currentPeriod);
-
-  return mergedPeriods;
-}
