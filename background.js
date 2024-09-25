@@ -6,6 +6,29 @@ let activeStartTime = null;
 let isChromeActive = true;
 let lastResetDate = null;
 
+// 初始化函数，在扩展启动时调用
+function initialize() {
+  chrome.storage.local.get(['domainTimeMap', 'domainVisitPeriods', 'lastResetDate', 'activeTabId', 'activeDomain', 'activeStartTime'], result => {
+    domainTimeMap = result.domainTimeMap || {};
+    domainVisitPeriods = result.domainVisitPeriods || {};
+    lastResetDate = result.lastResetDate || new Date().toDateString();
+    activeTabId = result.activeTabId || null;
+    activeDomain = result.activeDomain || null;
+    activeStartTime = result.activeStartTime || null;
+    
+    checkAndResetDaily();
+    
+    // 如果有活动标签，重新开始计时
+    if (activeTabId) {
+      chrome.tabs.get(activeTabId, tab => {
+        if (tab) {
+          setActiveTab(tab.id, tab.url);
+        }
+      });
+    }
+  });
+}
+
 function getDomainFromUrl(url) {
   if (!url) return null;
   
@@ -61,6 +84,7 @@ function setActiveTab(tabId, url) {
     activeDomain = null;
     activeStartTime = null;
   }
+  saveData();
 }
 
 function resetDailyData() {
@@ -78,7 +102,14 @@ function checkAndResetDaily() {
 }
 
 function saveData() {
-  chrome.storage.local.set({ domainTimeMap, domainVisitPeriods, lastResetDate });
+  chrome.storage.local.set({ 
+    domainTimeMap, 
+    domainVisitPeriods, 
+    lastResetDate,
+    activeTabId,
+    activeDomain,
+    activeStartTime
+  });
 }
 
 chrome.tabs.onActivated.addListener(activeInfo => {
@@ -98,19 +129,13 @@ chrome.windows.onFocusChanged.addListener(windowId => {
     updateActiveTime();
     isChromeActive = false;
   } else {
-    isChromeActive = true;
-    chrome.tabs.query({ active: true, windowId: windowId }, tabs => {
-      if (tabs.length > 0) {
-        setActiveTab(tabs[0].id, tabs[0].url);
-      }
-    });
+    handleChromeBecomingActive();
   }
 });
 
 chrome.idle.onStateChanged.addListener(state => {
   if (state === 'active') {
-    isChromeActive = true;
-    activeStartTime = Date.now();
+    handleChromeBecomingActive();
   } else {
     updateActiveTime();
     isChromeActive = false;
@@ -127,18 +152,29 @@ chrome.alarms.onAlarm.addListener(alarm => {
   }
 });
 
-chrome.runtime.onStartup.addListener(() => {
-  chrome.storage.local.get(['domainTimeMap', 'domainVisitPeriods', 'lastResetDate'], result => {
-    if (result.domainTimeMap) domainTimeMap = result.domainTimeMap;
-    if (result.domainVisitPeriods) domainVisitPeriods = result.domainVisitPeriods;
-    if (result.lastResetDate) lastResetDate = result.lastResetDate;
-    checkAndResetDaily();
-  });
-});
+chrome.runtime.onStartup.addListener(initialize);
+chrome.runtime.onInstalled.addListener(initialize);
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'getDomainTimeMap') {
     updateActiveTime();
     sendResponse({ domainTimeMap, domainVisitPeriods });
+  } else if (request.action === 'focusRegained') {
+    handleChromeBecomingActive();
   }
 });
+
+function handleChromeBecomingActive() {
+  isChromeActive = true;
+  if (!activeStartTime) {
+    activeStartTime = Date.now();
+  }
+  chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+    if (tabs.length > 0) {
+      setActiveTab(tabs[0].id, tabs[0].url);
+    }
+  });
+}
+
+// 初始化
+initialize();

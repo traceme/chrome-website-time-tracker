@@ -1,3 +1,7 @@
+window.addEventListener('focus', () => {
+  chrome.runtime.sendMessage({ action: 'focusRegained' });
+});
+
 function formatTime(ms) {
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
