@@ -4,11 +4,19 @@ let activeTabId = null;
 let activeDomain = null;
 let activeStartTime = null;
 let isChromeActive = true;
+let lastResetDate = null;
 
 function getDomainFromUrl(url) {
+  if (!url) return null;
+  
+  // 处理 chrome:// 和 edge:// 等特殊 URL
+  if (url.startsWith('chrome://') || url.startsWith('edge://')) {
+    return url.split('://')[0] + '://';
+  }
+
   try {
     const urlObj = new URL(url);
-    return urlObj.hostname;
+    return urlObj.hostname || urlObj.protocol;
   } catch (e) {
     console.error(`Invalid URL: ${url}`);
     return null;
@@ -17,24 +25,60 @@ function getDomainFromUrl(url) {
 
 function updateActiveTime() {
   if (activeDomain && activeStartTime && isChromeActive) {
-    const elapsedTime = Date.now() - activeStartTime;
+    const now = Date.now();
+    const elapsedTime = now - activeStartTime;
     if (!domainTimeMap[activeDomain]) {
       domainTimeMap[activeDomain] = 0;
       domainVisitPeriods[activeDomain] = [];
     }
     domainTimeMap[activeDomain] += elapsedTime;
-    domainVisitPeriods[activeDomain].push({
-      start: new Date(activeStartTime).toLocaleString(),
-      end: new Date().toLocaleString()
-    });
+    
+    // 更新或添加访问时间段
+    const lastPeriod = domainVisitPeriods[activeDomain][domainVisitPeriods[activeDomain].length - 1];
+    if (lastPeriod && lastPeriod.end === activeStartTime) {
+      lastPeriod.end = now;
+    } else {
+      domainVisitPeriods[activeDomain].push({
+        start: activeStartTime,
+        end: now
+      });
+    }
+    
+    activeStartTime = now;
+    saveData();
   }
-  activeStartTime = Date.now();
 }
 
 function setActiveTab(tabId, url) {
   updateActiveTime();
   activeTabId = tabId;
-  activeDomain = getDomainFromUrl(url);
+  const domain = getDomainFromUrl(url);
+  if (domain) {
+    activeDomain = domain;
+    activeStartTime = Date.now();
+  } else {
+    console.warn(`Unable to get domain from URL: ${url}`);
+    activeDomain = null;
+    activeStartTime = null;
+  }
+}
+
+function resetDailyData() {
+  domainTimeMap = {};
+  domainVisitPeriods = {};
+  lastResetDate = new Date().toDateString();
+  saveData();
+}
+
+function checkAndResetDaily() {
+  const today = new Date().toDateString();
+  if (lastResetDate !== today) {
+    resetDailyData();
+  }
+}
+
+function saveData() {
+  chrome.storage.local.set({ domainTimeMap, domainVisitPeriods, lastResetDate });
 }
 
 chrome.tabs.onActivated.addListener(activeInfo => {
@@ -73,19 +117,22 @@ chrome.idle.onStateChanged.addListener(state => {
   }
 });
 
-chrome.alarms.create('saveData', { periodInMinutes: 1 });
+// 每分钟更新一次数据
+chrome.alarms.create('updateData', { periodInMinutes: 1 });
 
 chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === 'saveData') {
+  if (alarm.name === 'updateData') {
     updateActiveTime();
-    chrome.storage.local.set({ domainTimeMap, domainVisitPeriods });
+    checkAndResetDaily();
   }
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  chrome.storage.local.get(['domainTimeMap', 'domainVisitPeriods'], result => {
+  chrome.storage.local.get(['domainTimeMap', 'domainVisitPeriods', 'lastResetDate'], result => {
     if (result.domainTimeMap) domainTimeMap = result.domainTimeMap;
     if (result.domainVisitPeriods) domainVisitPeriods = result.domainVisitPeriods;
+    if (result.lastResetDate) lastResetDate = result.lastResetDate;
+    checkAndResetDaily();
   });
 });
 

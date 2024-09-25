@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "网站时间统计",
-  "version": "0.2",
-  "description": "统计Chrome在整个打开期间每个网站的独立停留时间",
+  "version": "0.3",
+  "description": "持续统计Chrome在各个网站的停留时间",
   "action": {
     "default_popup": "popup.html"
   },

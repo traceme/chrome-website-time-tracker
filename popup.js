@@ -1,12 +1,17 @@
 function formatTime(ms) {
-  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   return `${hours}小时 ${minutes % 60}分钟`;
 }
 
+function formatDate(timestamp) {
+  return new Date(timestamp).toLocaleString();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  document.body.style.width = '800px';  // 设置宽度
-  document.body.style.height = '600px'; // 设置高度
+  document.body.style.width = '800px';
+  document.body.style.height = '600px';
 
   chrome.runtime.sendMessage({ action: 'getDomainTimeMap' }, response => {
     const domainTimeList = document.getElementById('domain-time-list');
@@ -23,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
       visitPeriods.forEach(period => {
         const periodItem = document.createElement('li');
         periodItem.className = 'time-period';
-        periodItem.textContent = `从 ${period.start} 到 ${period.end}`;
+        periodItem.textContent = `从 ${formatDate(period.start)} 到 ${formatDate(period.end)}`;
         periodList.appendChild(periodItem);
       });
 
