@@ -5,16 +5,18 @@ let activeDomain = null;
 let activeStartTime = null;
 let isChromeActive = true;
 let lastResetDate = null;
+let domainTitles = {};
 
 // 初始化函数，在扩展启动时调用
 function initialize() {
-  chrome.storage.local.get(['domainTimeMap', 'domainVisitPeriods', 'lastResetDate', 'activeTabId', 'activeDomain', 'activeStartTime'], result => {
+  chrome.storage.local.get(['domainTimeMap', 'domainVisitPeriods', 'lastResetDate', 'activeTabId', 'activeDomain', 'activeStartTime', 'domainTitles'], result => {
     domainTimeMap = result.domainTimeMap || {};
     domainVisitPeriods = result.domainVisitPeriods || {};
     lastResetDate = result.lastResetDate || new Date().toDateString();
     activeTabId = result.activeTabId || null;
     activeDomain = result.activeDomain || null;
     activeStartTime = result.activeStartTime || null;
+    domainTitles = result.domainTitles || {};
     
     checkAndResetDaily();
     
@@ -22,7 +24,7 @@ function initialize() {
     if (activeTabId) {
       chrome.tabs.get(activeTabId, tab => {
         if (tab) {
-          setActiveTab(tab.id, tab.url);
+          setActiveTab(tab.id, tab.url, tab.title);
         }
       });
     }
@@ -63,7 +65,8 @@ function updateActiveTime() {
     } else {
       domainVisitPeriods[activeDomain].push({
         start: activeStartTime,
-        end: now
+        end: now,
+        title: domainTitles[activeDomain]
       });
     }
     
@@ -72,13 +75,14 @@ function updateActiveTime() {
   }
 }
 
-function setActiveTab(tabId, url) {
+function setActiveTab(tabId, url, title) {
   updateActiveTime();
   activeTabId = tabId;
   const domain = getDomainFromUrl(url);
   if (domain) {
     activeDomain = domain;
     activeStartTime = Date.now();
+    domainTitles[domain] = title;
   } else {
     console.warn(`Unable to get domain from URL: ${url}`);
     activeDomain = null;
@@ -108,19 +112,20 @@ function saveData() {
     lastResetDate,
     activeTabId,
     activeDomain,
-    activeStartTime
+    activeStartTime,
+    domainTitles
   });
 }
 
 chrome.tabs.onActivated.addListener(activeInfo => {
   chrome.tabs.get(activeInfo.tabId, tab => {
-    setActiveTab(tab.id, tab.url);
+    setActiveTab(tab.id, tab.url, tab.title);
   });
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (tabId === activeTabId && changeInfo.url) {
-    setActiveTab(tabId, changeInfo.url);
+  if (tabId === activeTabId && (changeInfo.url || changeInfo.title)) {
+    setActiveTab(tabId, tab.url, tab.title);
   }
 });
 
@@ -171,7 +176,7 @@ function handleChromeBecomingActive() {
   }
   chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
     if (tabs.length > 0) {
-      setActiveTab(tabs[0].id, tabs[0].url);
+      setActiveTab(tabs[0].id, tabs[0].url, tabs[0].title);
     }
   });
 }

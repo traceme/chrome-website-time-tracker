@@ -9,8 +9,8 @@
       margin: 0;
       padding: 20px;
       background-color: #f9f9f9;
-      width: 100%; /* 设置宽度为100% */
-      box-sizing: border-box; /* 确保padding包含在宽度内 */
+      width: 100%;
+      box-sizing: border-box;
     }
     h1 {
       font-size: 18px;
@@ -31,11 +31,28 @@
     }
     .domain-name {
       font-weight: bold;
-      margin-bottom: 5px;
+      margin-bottom: 10px;
     }
     .time-period {
-      font-size: 12px;
-      color: #555;
+      font-size: 14px;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .period-duration {
+      width: 150px;
+    }
+    .period-title {
+      flex: 1;
+      margin: 0 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .period-time {
+      width: 300px;
+      text-align: right;
     }
   </style>
 </head>
