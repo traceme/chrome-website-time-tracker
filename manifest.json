@@ -1,18 +1,18 @@
 {
   "manifest_version": 3,
   "name": "网站时间统计",
-  "version": "0.1",
-  "description": "统计每天在各个网站上花费的时间",
+  "version": "0.2",
+  "description": "统计Chrome在整个打开期间每个网站的独立停留时间",
   "action": {
-    "default_popup": "popup.html",
-    "default_popup_width": 800,  // 设置弹出窗口的宽度
-    "default_popup_height": 600  // 设置弹出窗口的高度
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "background.js"
   },
   "permissions": [
     "tabs",
-    "storage"
+    "storage",
+    "idle",
+    "alarms"
   ]
 }

@@ -1,13 +1,14 @@
-const domainTimeMap = {};
-const domainVisitPeriods = {};
+let domainTimeMap = {};
+let domainVisitPeriods = {};
 let activeTabId = null;
 let activeDomain = null;
 let activeStartTime = null;
+let isChromeActive = true;
 
 function getDomainFromUrl(url) {
   try {
     const urlObj = new URL(url);
-    return urlObj.hostname.split('.').slice(-2).join('.');
+    return urlObj.hostname;
   } catch (e) {
     console.error(`Invalid URL: ${url}`);
     return null;
@@ -15,7 +16,7 @@ function getDomainFromUrl(url) {
 }
 
 function updateActiveTime() {
-  if (activeDomain && activeStartTime) {
+  if (activeDomain && activeStartTime && isChromeActive) {
     const elapsedTime = Date.now() - activeStartTime;
     if (!domainTimeMap[activeDomain]) {
       domainTimeMap[activeDomain] = 0;
@@ -27,55 +28,65 @@ function updateActiveTime() {
       end: new Date().toLocaleString()
     });
   }
+  activeStartTime = Date.now();
+}
+
+function setActiveTab(tabId, url) {
+  updateActiveTime();
+  activeTabId = tabId;
+  activeDomain = getDomainFromUrl(url);
 }
 
 chrome.tabs.onActivated.addListener(activeInfo => {
-  updateActiveTime();
-  activeTabId = activeInfo.tabId;
-  activeStartTime = Date.now();
-  chrome.tabs.get(activeTabId, tab => {
-    const domain = getDomainFromUrl(tab.url);
-    if (domain) {
-      activeDomain = domain;
-    } else {
-      activeDomain = null;
-    }
+  chrome.tabs.get(activeInfo.tabId, tab => {
+    setActiveTab(tab.id, tab.url);
   });
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (tabId === activeTabId && changeInfo.url) {
-    updateActiveTime();
-    const domain = getDomainFromUrl(changeInfo.url);
-    if (domain) {
-      activeDomain = domain;
-      activeStartTime = Date.now();
-    } else {
-      activeDomain = null;
-    }
+    setActiveTab(tabId, changeInfo.url);
   }
 });
 
 chrome.windows.onFocusChanged.addListener(windowId => {
   if (windowId === chrome.windows.WINDOW_ID_NONE) {
     updateActiveTime();
-    activeTabId = null;
-    activeDomain = null;
-    activeStartTime = null;
+    isChromeActive = false;
   } else {
+    isChromeActive = true;
     chrome.tabs.query({ active: true, windowId: windowId }, tabs => {
       if (tabs.length > 0) {
-        activeTabId = tabs[0].id;
-        const domain = getDomainFromUrl(tabs[0].url);
-        if (domain) {
-          activeDomain = domain;
-          activeStartTime = Date.now();
-        } else {
-          activeDomain = null;
-        }
+        setActiveTab(tabs[0].id, tabs[0].url);
       }
     });
   }
+});
+
+chrome.idle.onStateChanged.addListener(state => {
+  if (state === 'active') {
+    isChromeActive = true;
+    activeStartTime = Date.now();
+  } else {
+    updateActiveTime();
+    isChromeActive = false;
+  }
+});
+
+chrome.alarms.create('saveData', { periodInMinutes: 1 });
+
+chrome.alarms.onAlarm.addListener(alarm => {
+  if (alarm.name === 'saveData') {
+    updateActiveTime();
+    chrome.storage.local.set({ domainTimeMap, domainVisitPeriods });
+  }
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  chrome.storage.local.get(['domainTimeMap', 'domainVisitPeriods'], result => {
+    if (result.domainTimeMap) domainTimeMap = result.domainTimeMap;
+    if (result.domainVisitPeriods) domainVisitPeriods = result.domainVisitPeriods;
+  });
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
