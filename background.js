@@ -77,11 +77,9 @@ function updateActiveTime() {
     
     // 更新访问时间段
     pageVisitPeriods[activeSite] = pageVisitPeriods[activeSite] || {};
-    pageVisitPeriods[activeSite][activePage] = pageVisitPeriods[activeSite][activePage] || [];
-    pageVisitPeriods[activeSite][activePage].push({
-      start: activeStartTime,
-      end: now
-    });
+    pageVisitPeriods[activeSite][activePage] = pageVisitPeriods[activeSite][activePage] || { start: now, end: now };
+    pageVisitPeriods[activeSite][activePage].start = Math.min(pageVisitPeriods[activeSite][activePage].start, activeStartTime);
+    pageVisitPeriods[activeSite][activePage].end = Math.max(pageVisitPeriods[activeSite][activePage].end, now);
   }
   
   activeStartTime = Date.now();

@@ -43,17 +43,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const pageItem = document.createElement('li');
         pageItem.className = 'page-item';
         const title = (pageTitleMap[page] || 'Untitled').substring(0, 30);
-        const periods = pageVisitPeriods[page] || [];
-        
-        let periodsHtml = '';
-        periods.forEach(period => {
-          periodsHtml += `<div class="period">${formatDate(period.start)} - ${formatDate(period.end)}</div>`;
-        });
+        const period = pageVisitPeriods[page] || { start: 0, end: 0 };
         
         pageItem.innerHTML = `
           <div class="page-title">${title}</div>
           <div class="page-time">${formatTime(pageTime)}</div>
-          <div class="page-periods">${periodsHtml}</div>
+          <div class="page-period">${formatDate(period.start)} - ${formatDate(period.end)}</div>
         `;
         pageList.appendChild(pageItem);
       });
