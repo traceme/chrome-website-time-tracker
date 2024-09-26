@@ -7,6 +7,7 @@ let activeSite = null;
 let activePage = null;
 let activeStartTime = null;
 let isChromeActive = true;
+let isActiveWindow = true; // 新增：跟踪当前窗口是否活跃
 let lastResetDate = null;
 
 // 初始化函数，在扩展启动时调用
@@ -35,6 +36,18 @@ function initialize() {
       });
     }
   });
+  
+  // 设置每天0点重置数据的闹钟
+  chrome.alarms.create('dailyReset', {
+    when: getNextMidnight(),
+    periodInMinutes: 24 * 60 // 每24小时重复一次
+  });
+}
+
+function getNextMidnight() {
+  let midnight = new Date();
+  midnight.setHours(24, 0, 0, 0);
+  return midnight.getTime();
 }
 
 function getSiteFromUrl(url) {
@@ -54,7 +67,7 @@ function getSiteFromUrl(url) {
 }
 
 function updateActiveTime() {
-  if (activeSite && activePage && activeStartTime && isChromeActive) {
+  if (activeSite && activePage && activeStartTime && isChromeActive && isActiveWindow) {
     const now = Date.now();
     const elapsedTime = now - activeStartTime;
     
@@ -69,10 +82,10 @@ function updateActiveTime() {
       start: activeStartTime,
       end: now
     });
-    
-    activeStartTime = now;
-    saveData();
   }
+  
+  activeStartTime = Date.now();
+  saveData();
 }
 
 function setActiveTab(tabId, url, title) {
@@ -137,6 +150,7 @@ chrome.tabs.onActivated.addListener(activeInfo => {
       console.warn(`Error getting tab: ${chrome.runtime.lastError.message}`);
       return;
     }
+    updateActiveTime(); // 在切换标签页时更新时间
     setActiveTab(tab.id, tab.url, tab.title);
   });
 });
@@ -151,8 +165,10 @@ chrome.windows.onFocusChanged.addListener(windowId => {
   if (windowId === chrome.windows.WINDOW_ID_NONE) {
     updateActiveTime();
     isChromeActive = false;
+    isActiveWindow = false;
   } else {
     handleChromeBecomingActive();
+    isActiveWindow = true;
   }
 });
 
@@ -162,6 +178,7 @@ chrome.idle.onStateChanged.addListener(state => {
   } else {
     updateActiveTime();
     isChromeActive = false;
+    isActiveWindow = false;
   }
 });
 
@@ -169,7 +186,9 @@ chrome.idle.onStateChanged.addListener(state => {
 chrome.alarms.create('updateData', { periodInMinutes: 1 });
 
 chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === 'updateData') {
+  if (alarm.name === 'dailyReset') {
+    resetDailyData();
+  } else if (alarm.name === 'updateData') {
     updateActiveTime();
     checkAndResetDaily();
   }
@@ -189,6 +208,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 function handleChromeBecomingActive() {
   isChromeActive = true;
+  isActiveWindow = true;
   if (!activeStartTime) {
     activeStartTime = Date.now();
   }
