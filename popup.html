@@ -7,51 +7,57 @@
     body {
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 10px;
       background-color: #f9f9f9;
-      width: 100%;
+      width: 780px;  /* 调整宽度 */
       box-sizing: border-box;
     }
     h1 {
       font-size: 18px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       text-align: center;
     }
     ul {
       list-style-type: none;
       padding: 0;
+      margin: 0;
     }
     li {
       background-color: #fff;
       border: 1px solid #ddd;
       border-radius: 4px;
-      margin-bottom: 10px;
-      padding: 10px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      margin-bottom: 8px;
+      padding: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
     .site-name {
       font-weight: bold;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .page-item {
-      font-size: 14px;
+      font-size: 13px;
       color: #333;
-      margin-bottom: 10px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     .page-title {
-      font-weight: bold;
-      margin-bottom: 5px;
+      flex: 1;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-right: 8px;
     }
     .page-time {
-      color: #666;
-      margin-bottom: 5px;
+      flex: 0 0 120px;
+      text-align: center;
     }
-    .page-periods {
+    .page-period {
+      flex: 0 0 180px;
+      text-align: right;
       font-size: 12px;
-      color: #888;
-    }
-    .period {
-      margin-bottom: 2px;
     }
   </style>
 </head>
